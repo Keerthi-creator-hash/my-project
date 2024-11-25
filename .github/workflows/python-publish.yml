@@ -1,107 +1,83 @@
-Skip to content
-Navigation Menu
-Keerthi-creator-hash
-/
-my-project
+# Workflow Name
+name: Flask App CI/CD with PyPI Publish
 
-Type / to search
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Security
-Insights
-Settings
-Commit 73c641e
-Preview
-Give feedback
-Keerthi-creator-hash
-Keerthi-creator-hash
-authored
-27 minutes ago
-Verified
-Create python-publish.yml
-main
-1 parent 
-10cf097
- commit 
-73c641e
-1 file changed
-+70
--0
-lines changed
-Search within code
- 
-‎.github/workflows/python-publish.yml
-+70
-
-
-Original file line number	Diff line number	Diff line change
-@@ -0,0 +1,70 @@
-# This workflow will upload a Python Package to PyPI when a release is created
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-name: Upload Python Package
 on:
+  push:
+    branches:
+      - main  # Run CI/CD on pushes to the main branch
+  pull_request:
+    branches:
+      - main  # Run tests on pull requests targeting the main branch
   release:
-    types: [published]
+    types: [published]  # Publish to PyPI on release creation
+
 permissions:
   contents: read
+
 jobs:
-  release-build:
+  # Step 1: Test the application
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-      - name: Build release distributions
+
+      - name: Install dependencies
         run: |
-          # NOTE: put your own distribution build steps here.
-          python -m pip install build
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest  # Ensure pytest is installed
+
+      - name: Run tests
+        run: pytest  # Run all test cases in your Flask app
+
+  # Step 2: Build the release distributions (for PyPI publishing)
+  release-build:
+    needs: test  # Ensure tests pass before building
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Build distributions
+        run: |
+          python -m pip install --upgrade pip build
           python -m build
+
       - name: Upload distributions
         uses: actions/upload-artifact@v4
         with:
           name: release-dists
           path: dist/
+
+  # Step 3: Publish to PyPI
   pypi-publish:
+    needs: release-build
     runs-on: ubuntu-latest
-    needs:
-      - release-build
     permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
-    # Dedicated environments with protections for publishing are strongly recommended.
-    # For more information, see: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules
+
     environment:
       name: pypi
-      # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
-      # url: https://pypi.org/p/YOURPROJECT
-      #
-      # ALTERNATIVE: if your GitHub Release name is the PyPI project version string
-      # ALTERNATIVE: exactly, uncomment the following line instead:
-      # url: https://pypi.org/project/YOURPROJECT/${{ github.event.release.name }}
+      url: https://pypi.org/project/YOURPROJECT  # Update with your PyPI project URL
+
     steps:
       - name: Retrieve release distributions
         uses: actions/download-artifact@v4
         with:
           name: release-dists
           path: dist/
-      - name: Publish release distributions to PyPI
+
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
-0 commit comments
-Comments
-0
- (0)
-Comment
-You're receiving notifications because you're subscribed to this thread.
-
-Create python-publish.yml · Keerthi-creator-hash/my-project@73c641e
